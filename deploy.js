@@ -11,6 +11,29 @@ const provider = new HDWalletProvider(
 
 const web3 = new Web3(provider);
 
+async function scan(message) {
+    process.stdout.write(message);
+    return await new Promise(function (resolve, reject) {
+        process.stdin.resume();
+        process.stdin.once("data", function (data) {
+            process.stdin.pause();
+            resolve(data.toString().trim());
+        });
+    });
+}
+
+async function getGasPrice(web3) {
+    while (true) {
+        const nodeGasPrice = await web3.eth.getGasPrice();
+        const userGasPrice = await scan(`Enter gas-price or leave empty to use ${nodeGasPrice}: `);
+        if (/^\d+$/.test(userGasPrice))
+            return userGasPrice;
+        if (userGasPrice == "")
+            return nodeGasPrice;
+        console.log("Illegal gas-price");
+    }
+}
+
 const deploy = async () => {
     const accounts = await web3.eth.getAccounts()
 
@@ -22,7 +45,7 @@ const deploy = async () => {
             data: contracts.Donation.Donation.evm.bytecode.object.toString(),
             arguments: [accounts[1], '0234234234']
         })
-        .send({from: accounts[0], gas: 10000000, gasPrice: 100000000000})
+        .send({from: accounts[0], gas: 1500000, gasPrice: await getGasPrice(web3),})
 
     console.log('contract deploy to', result.options.address)
 };
